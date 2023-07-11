@@ -24,7 +24,6 @@ import pyrogram
 from enum import Enum
 from ..utils import patch, patchable, PyromodConfig
 
-loop = asyncio.get_event_loop()
 
 
 class ListenerStopped(Exception):
@@ -62,7 +61,7 @@ class Client:
                 " value from pyromod.listen.ListenerTypes"
             )
 
-        future = loop.create_future()
+        future = self.loop.create_future()
         future.add_done_callback(
             lambda f: self.stop_listening(identifier, listener_type)
         )
