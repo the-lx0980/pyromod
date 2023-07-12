@@ -24,6 +24,7 @@ import pyrogram
 from enum import Enum
 from ..utils import patch, patchable, PyromodConfig
 
+loop = asyncio.get_event_loop()
 
 
 class ListenerStopped(Exception):
@@ -61,7 +62,7 @@ class Client:
                 " value from pyromod.listen.ListenerTypes"
             )
 
-        future = self.loop.create_future()
+        future = loop.create_future()
         future.add_done_callback(
             lambda f: self.stop_listening(identifier, listener_type)
         )
@@ -191,10 +192,17 @@ class MessageHandler:
 
     @patchable
     async def check(self, client, message):
-        listener = client.match_listener(
-            (message.chat.id, message.from_user.id, message.id),
-            ListenerTypes.MESSAGE,
-        )[0]
+        try:
+            if message.from_user is None:
+                _id = message.sender_chat.id
+            else:
+                _id = message.from_user.id
+            listener = client.match_listener(
+                (message.chat.id, _id, message.id),
+                ListenerTypes.MESSAGE,
+            )[0]
+        except AttributeError:
+            listener = None
 
         listener_does_match = handler_does_match = False
 
@@ -215,11 +223,17 @@ class MessageHandler:
 
     @patchable
     async def resolve_future(self, client, message, *args):
-        listener_type = ListenerTypes.MESSAGE
-        listener, identifier = client.match_listener(
-            (message.chat.id, message.from_user.id, message.id),
-            listener_type,
-        )
+        try:
+            if message.from_user is None:
+                _id = message.sender_chat.id
+            else:
+                _id = message.from_user.id
+            listener, identifier = client.match_listener(
+                (message.chat.id, _id, message.id),
+                ListenerTypes.MESSAGE,
+            )
+        except AttributeError:
+            listener = identifier = 0
         listener_does_match = False
         if listener:
             filters = listener["filters"]
@@ -230,7 +244,7 @@ class MessageHandler:
         if listener_does_match:
             if not listener["future"].done():
                 listener["future"].set_result(message)
-                del client.listeners[listener_type][identifier]
+                del client.listeners[ListenerTypes.MESSAGE][identifier]
                 raise pyrogram.StopPropagation
         else:
             await self.registered_handler(client, message, *args)
