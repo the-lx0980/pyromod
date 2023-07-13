@@ -260,12 +260,12 @@ class CallbackQueryHandler:
     @patchable
     async def check(self, client, query):
         try:
-            if message.from_user is None:
-                _id = message.sender_chat.id
+            if query.message.from_user is None:
+                _id = query.message.sender_chat.id
             else:
-                _id = message.from_user.id
+                _id = query.message.from_user.id
             listener = client.match_listener(
-                (message.chat.id, _id, message.id),
+                (query.message.chat.id, _id, query.message.id),
                 ListenerTypes.CALLBACK_QUERY,
             )[0]
         except AttributeError:
